@@ -1,6 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
+import { useEffect, useState } from 'react';
 import { GalleryPhoto } from '@/types';
 import { subscribeGallery, uploadPhoto, deletePhoto } from '@/services/gallery';
 import { Trash2, Upload } from 'lucide-react';
@@ -14,18 +13,17 @@ export default function GalleryPage() {
 
     useEffect(() => subscribeGallery(setPhotos), []);
 
-    const onDrop = useCallback(async (files: File[]) => {
+    async function handleFiles(files: FileList | null) {
+        if (!files || files.length === 0) return;
         setUploading(true);
         try {
-            await Promise.all(files.map(f => uploadPhoto(f, album)));
+            await Promise.all(Array.from(files).map(f => uploadPhoto(f, album)));
             toast.success(`Загружено ${files.length} фото`);
-        } catch { toast.error('Ошибка загрузки'); }
+        } catch {
+            toast.error('Ошибка загрузки');
+        }
         setUploading(false);
-    }, [album]);
-
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({
-        onDrop, accept: { 'image/*': [] }, multiple: true,
-    });
+    }
 
     async function handleDelete(photo: GalleryPhoto) {
         if (!confirm('Удалить фото?')) return;
@@ -59,23 +57,25 @@ export default function GalleryPage() {
                     </div>
                 </div>
 
-                <div {...getRootProps()}
-                     className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition ${
-                         isDragActive
-                             ? 'border-red-500 bg-red-500/10'
-                             : 'border-gray-700 hover:border-red-500 hover:bg-gray-800/50'}`}>
-                    <input {...getInputProps()} />
-                    <Upload size={32} className="mx-auto text-gray-500 mb-3" />
+                <label
+                    className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition flex flex-col items-center
+            border-gray-700 hover:border-red-500 hover:bg-gray-800/50`}>
+                    <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={e => handleFiles(e.target.files)}
+                    />
+                    <Upload size={32} className="text-gray-500 mb-3" />
                     {uploading
                         ? <p className="text-gray-400">Загружаем фото...</p>
-                        : isDragActive
-                            ? <p className="text-red-400">Отпустите файлы здесь</p>
-                            : <div>
-                                <p className="text-gray-300 font-medium">Перетащите фото сюда</p>
-                                <p className="text-gray-500 text-sm mt-1">или нажмите для выбора файлов</p>
-                            </div>
+                        : <div>
+                            <p className="text-gray-300 font-medium">Нажмите для выбора фото</p>
+                            <p className="text-gray-500 text-sm mt-1">Можно выбрать несколько файлов</p>
+                        </div>
                     }
-                </div>
+                </label>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
